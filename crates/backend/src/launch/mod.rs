@@ -2419,14 +2419,20 @@ impl LaunchContext {
             ArgumentExpansionKey::AuthAccessToken => OsStr::new(if let Some(access_token) = &self.login_info.access_token {
                 access_token.secret()
             } else {
-                "offline"
+                "0"
             }).into(),
             ArgumentExpansionKey::Clientid => OsStr::new("").into(), // These are just used for telemetry
             ArgumentExpansionKey::AuthXuid => OsStr::new("").into(), // These are just used for telemetry
             ArgumentExpansionKey::VersionType => OsStr::new("release").into(),
             ArgumentExpansionKey::QuickPlayPath => OsStr::new("quickPlay/log.json").into(),
             ArgumentExpansionKey::UserProperties => OsStr::new("{}").into(),
-            ArgumentExpansionKey::UserType => OsStr::new("msa").into(),
+            ArgumentExpansionKey::UserType => {
+                if self.login_info.access_token.is_some() {
+                    OsStr::new("msa").into()
+                } else {
+                    OsStr::new("legacy").into()
+                }
+            },
             ArgumentExpansionKey::ResolutionWidth => OsString::from(format!("{}", self.rule_context.custom_resolution.unwrap().0)).into(),
             ArgumentExpansionKey::ResolutionHeight => OsString::from(format!("{}", self.rule_context.custom_resolution.unwrap().1)).into(),
             ArgumentExpansionKey::QuickPlaySingleplayer => {

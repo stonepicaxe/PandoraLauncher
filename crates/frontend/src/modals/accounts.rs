@@ -5,7 +5,6 @@ use gpui::{prelude::FluentBuilder, *};
 use gpui_component::{
     ActiveTheme, Disableable, WindowExt, button::{Button, ButtonVariants}, h_flex, input::{Input, InputState}, sheet::Sheet, v_flex,
 };
-use rand::Rng;
 use uuid::Uuid;
 
 use crate::{component::shrinking_text::ShrinkingText, entity::{DataEntities, account::{AccountEntries, AccountExt}}, icon::PandoraIcon, interface_config::InterfaceConfig, png_render_cache};
@@ -285,7 +284,7 @@ impl Render for Accounts {
                     window.open_dialog(cx, move |dialog, _, cx| {
                         let username = name_input.read(cx).value();
                         let valid_name = username.len() >= 1 && username.len() <= 16 &&
-                            username.as_bytes().iter().all(|c| *c > 32 && *c < 127);
+                            username.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
                         let uuid = uuid_input.read(cx).value();
                         let valid_uuid = uuid.is_empty() || Uuid::try_parse(&uuid).is_ok();
 
@@ -298,9 +297,7 @@ impl Render for Accounts {
                             let uuid = if let Ok(uuid) = Uuid::try_parse(&uuid) {
                                uuid
                             } else {
-                                let uuid: u128 = rand::thread_rng().r#gen();
-                                let uuid = (uuid & !0xF0000000000000000000) | 0x30000000000000000000; // set version to 3
-                                Uuid::from_u128(uuid)
+                                bridge::account::offline_player_uuid(&username)
                             };
 
                             backend_handle.send(MessageToBackend::AddOfflineAccount {

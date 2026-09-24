@@ -305,13 +305,14 @@ async fn import_accounts_from_multimc(backend: &BackendState, import_job: &Impor
 
                     tracker.add_count(1);
 
+                    let is_offline = matches!(account, MultiMCAccount::Offline { .. });
                     if let Some(account) = accounts.accounts.get_mut(&profile.id) {
-                        account.offline = false;
+                        account.offline = is_offline;
                         account.username = profile.name.clone();
                     } else {
                         accounts.accounts.insert(profile.id, BackendAccount {
                             username: profile.name.clone(),
-                            offline: false,
+                            offline: is_offline,
                             head: None
                         });
                     }

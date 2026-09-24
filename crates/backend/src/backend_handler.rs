@@ -1549,6 +1549,15 @@ impl BackendState {
             MessageToBackend::GetAccountSkin { account, result } => {
                 let backend = self.clone();
                 tokio::task::spawn(async move {
+                    let is_offline = {
+                        let mut account_info = backend.account_info.write();
+                        account_info.get().accounts.get(&account).map(|a| a.offline).unwrap_or(false)
+                    };
+                    if is_offline {
+                        _ = result.send(AccountSkinResult::Success { skin: None, variant: SkinVariant::Classic });
+                        return;
+                    }
+
                     let Some(account) = backend.get_minecraft_profile(account).await else {
                         _ = result.send(AccountSkinResult::NeedsLogin);
                         return;
@@ -1562,6 +1571,14 @@ impl BackendState {
                 });
             },
             MessageToBackend::SetAccountSkin { account, skin, variant } => {
+                let is_offline = {
+                    let mut account_info = self.account_info.write();
+                    account_info.get().accounts.get(&account).map(|a| a.offline).unwrap_or(false)
+                };
+                if is_offline {
+                    return;
+                }
+
                 let Some((_, access_token)) = self.noninteractive_login_flow(account).await else {
                     self.send.send_error("Unable to get access token");
                     return;
@@ -1616,6 +1633,15 @@ impl BackendState {
             MessageToBackend::GetAccountCapes { account, result } => {
                 let backend = self.clone();
                 tokio::task::spawn(async move {
+                    let is_offline = {
+                        let mut account_info = backend.account_info.write();
+                        account_info.get().accounts.get(&account).map(|a| a.offline).unwrap_or(false)
+                    };
+                    if is_offline {
+                        _ = result.send(AccountCapesResult::Success { capes: vec![] });
+                        return;
+                    }
+
                     let Some(account) = backend.get_minecraft_profile(account).await else {
                         _ = result.send(AccountCapesResult::NeedsLogin);
                         return;
@@ -1627,6 +1653,13 @@ impl BackendState {
                 });
             },
             MessageToBackend::SetAccountCape { account, cape } => {
+                let is_offline = {
+                    let mut account_info = self.account_info.write();
+                    account_info.get().accounts.get(&account).map(|a| a.offline).unwrap_or(false)
+                };
+                if is_offline {
+                    return;
+                }
                 let Some((_, access_token)) = self.noninteractive_login_flow(account).await else {
                     self.send.send_error("Unable to get access token");
                     return;
@@ -1906,7 +1939,13 @@ impl BackendState {
                 }
             },
             MessageToBackend::Login { account, modal_action } => {
-                self.login_flow(&modal_action, Some(account)).await;
+                let is_offline = {
+                    let mut account_info = self.account_info.write();
+                    account_info.get().accounts.get(&account).map(|a| a.offline).unwrap_or(false)
+                };
+                if !is_offline {
+                    self.login_flow(&modal_action, Some(account)).await;
+                }
                 modal_action.set_finished();
             },
             MessageToBackend::Quit => {
